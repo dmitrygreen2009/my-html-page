@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entangled Tic-Tac-Toe</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            margin: 0;
+            background-color: white;
+        }
+        
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .instructions {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border: 1px solid #b3d9ff;
+            margin-bottom: 20px;
+        }
+        
+        .game-mode-selector {
+            background-color: #fff3cd;
+            padding: 10px;
+            border: 1px solid #ffc107;
+            margin-bottom: 20px;
+        }
+        
+        .status-section {
+            margin-bottom: 20px;
+        }
+        
+        .wavefunction-section {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 80px);
+            gap: 2px;
+            margin-bottom: 20px;
+        }
+        
+        .cell {
+            width: 80px;
+            height: 80px;
+            border: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            background-color: white;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .cell.disabled {
+            cursor: default;
+        }
+        
+        .cell.selected {
+            background-color: #e0e0e0;
+        }
+        
+        .cell.x-entangled {
+            background-color: #ff4444;
+        }
+        
+        .cell.o-entangled {
+            background-color: #4444ff;
+        }
+        
+        .cell.empty-measured {
+            background-color: #f0f0f0;
+        }
+        
+        .cell-content {
+            font-size: 36px;
+            color: black;
+            position: relative;
+        }
+        
+        .cell-number {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            margin-right: 10px;
+            font-family: monospace;
+        }
+        
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-warning {
+            background-color: #ffa500;
+            color: white;
+        }
+        
+        .measurement-results {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .measurement-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 40px);
+            gap: 2px;
+            margin-top: 5px;
+        }
+        
+        .measurement-cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background-color: white;
+        }
+        
+        .measurement-cell.empty {
+            background-color: #f0f0f0;
+        }
+        
+        .large-symbol {
+            font-size: 18px;
+        }
+        
+        .wavefunction-text {
+            font-family: monospace;
+            font-size: 14px;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h2>Entangled TicTacToe - New Rules</h2>
+        
+        <div class="instructions">
+            <h3>How to Play Entangled Tic-Tac-Toe</h3>
+            <p>This game is like regular tic-tac-toe, but each player can make one special "quantum move" by <strong>entangling</strong> two empty squares. Entangled squares exist in <strong>superposition</strong>. When all the squares are filled, at game's end measurement randomly collapses the <strong>wavefunction</strong> and for each entangled pair one square gets your symbol, the other becomes empty. This <strong>probabilistic collapse</strong> means you may need multiple measurements ("shots") to see your quantum advantage. Unlike classical tic-tac-toe where optimal play leads to ties, quantum entanglement can break this symmetry and create winning probabilities. Your challenge is discovering how to gain <strong>quantum advantage</strong> over purely classical opponents - can you find the winning quantum strategy?</p>
+            <p><strong>Note 1:</strong> Entangling trades one definite square for two quantum possibilities.</p>
+            <p><strong>Note 2:</strong> After measurement, squares can be in one of three states: ×, ○, or empty.</p>
+            <p><strong>Note 3:</strong> The computer can only play classically.</p>
+        </div>
+        
+        <div class="game-mode-selector">
+            <strong>Game Mode:</strong>
+            <div style="margin-top: 5px;">
+                <button id="humanBtn" class="btn btn-primary">Human vs Human</button>
+                <button id="computerBtn" class="btn btn-secondary">Human (×, Quantum) vs Computer (○, Classical)</button>
+            </div>
+        </div>
+        
+        <div class="status-section">
+            <div id="currentPlayerStatus">Current Player: <span class="large-symbol">×</span></div>
+            <br>
+            <div id="modeStatus">Mode: Place definite state </div>
+            <br>
+            <div id="entanglementStatus">Entanglements used: <span class="large-symbol">×</span> = No, <span class="large-symbol">○</span> = No</div>
+        </div>
+        
+        <div class="wavefunction-section">
+            <strong>Wavefunction:</strong>
+            <div class="wavefunction-text" id="wavefunctionDisplay">|ψ⟩ = |. . . . . . . . .⟩</div>
+        </div>
+        
+        <div class="game-grid" id="gameGrid">
+            <!-- Grid cells will be generated by JavaScript -->
+        </div>
+        
+        <div class="controls">
+            <button id="modeToggleBtn" class="btn">Switch to Entangle mode</button>
+            <button id="resetBtn" class="btn">Reset Game</button>
+        </div>
+        
+        <div id="measurementControls" class="controls" style="display: none;">
+            <button id="measureBtn" class="btn">Take Measurement (Shot)</button>
+            <button id="showOriginalBtn" class="btn btn-warning" style="display: none;">Show Original Board</button>
+        </div>
+        
+        <div id="measurementResults"></div>
+    </div>
+
+    <script>
+        // Game state
+        let grid = Array(9).fill(null);
+        let currentPlayer = 'X';
+        let mode = 'place';
+        let entangleFirst = null;
+        let gameComplete = false;
+        let measurements = [];
+        let xEntanglementUsed = false;
+        let oEntanglementUsed = false;
+        let entanglements = [];
+        let measuredGrid = null;
+        let gameMode = 'human';
+        
+        // Initialize game
+        function initializeGame() {
+            createGrid();
+            updateDisplay();
+            setupEventListeners();
+        }
+        
+        function createGrid() {
+            const gridElement = document.getElementById('gameGrid');
+            gridElement.innerHTML = '';
+            
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                cell.innerHTML = `<div class="cell-content" id="cell-${i}"></div><div class="cell-number">${i + 1}</div>`;
+                cell.addEventListener('click', () => handleCellClick(i));
+                gridElement.appendChild(cell);
+            }
+        }
+        
+        function setupEventListeners() {
+            document.getElementById('humanBtn').addEventListener('click', () => setGameMode('human'));
+            document.getElementById('computerBtn').addEventListener('click', () => setGameMode('computer'));
+            document.getElementById('modeToggleBtn').addEventListener('click', toggleMode);
+            document.getElementById('resetBtn').addEventListener('click', resetGame);
+            document.getElementById('measureBtn').addEventListener('click', measureQuantumState);
+            document.getElementById('showOriginalBtn').addEventListener('click', showOriginalBoard);
+        }
+        
+        function setGameMode(newMode) {
+            gameMode = newMode;
+            document.getElementById('humanBtn').className = gameMode === 'human' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('computerBtn').className = gameMode === 'computer' ? 'btn btn-primary' : 'btn btn-secondary';
+            resetGame();
+        }
+        
+        function resetGame() {
+            grid = Array(9).fill(null);
+            currentPlayer = 'X';
+            mode = 'place';
+            entangleFirst = null;
+            gameComplete = false;
+            measurements = [];
+            xEntanglementUsed = false;
+            oEntanglementUsed = false;
+            entanglements = [];
+            measuredGrid = null;
+            
+            document.getElementById('measurementResults').innerHTML = '';
+            document.getElementById('measurementControls').style.display = 'none';
+            
+            updateDisplay();
+        }
+        
+        function handleCellClick(index) {
+            if (grid[index] !== null || gameComplete) return;
+            if (gameMode === 'computer' && currentPlayer === 'O') return;
+            
+            if (mode === 'place') {
+                grid[index] = currentPlayer;
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                
+                if (isGameComplete()) {
+                    gameComplete = true;
+                }
+                
+                updateDisplay();
+                
+                if (gameMode === 'computer' && currentPlayer === 'O' && !gameComplete) {
+                    setTimeout(makeComputerMove, 500);
+                }
+            } else if (mode === 'entangle') {
+                const canEntangle = (currentPlayer === 'X' && !xEntanglementUsed) || 
+                                   (currentPlayer === 'O' && !oEntanglementUsed);
+                
+                if (!canEntangle) {
+                    alert(`Player ${currentPlayer} has already used their entanglement!`);
+                    return;
+                }
+                
+                if (gameMode === 'computer' && currentPlayer === 'O') return;
+                
+                if (entangleFirst === null) {
+                    entangleFirst = index;
+                    updateDisplay();
+                } else if (entangleFirst !== index) {
+                    grid[entangleFirst] = `${currentPlayer}*`;
+                    grid[index] = `${currentPlayer}*`;
+                    
+                    if (currentPlayer === 'X') {
+                        xEntanglementUsed = true;
+                    } else {
+                        oEntanglementUsed = true;
+                    }
+                    
+                    entanglements.push({
+                        cells: [entangleFirst, index],
+                        player: currentPlayer
+                    });
+                    
+                    entangleFirst = null;
+                    mode = 'place';
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    
+                    if (isGameComplete()) {
+                        gameComplete = true;
+                    }
+                    
+                    updateDisplay();
+                    
+                    if (gameMode === 'computer' && currentPlayer === 'O' && !gameComplete) {
+                        setTimeout(makeComputerMove, 500);
+                    }
+                }
+            }
+        }
+        
+        function makeComputerMove() {
+            if (currentPlayer !== 'O' || gameMode !== 'computer' || gameComplete) return;
+            
+            const bestMove = findBestMove();
+            if (!bestMove) return;
+            
+            grid[bestMove.cell] = 'O';
+            currentPlayer = 'X';
+            
+            if (isGameComplete()) {
+                gameComplete = true;
+            }
+            
+            updateDisplay();
+        }
+        
+        function findBestMove() {
+            let bestScore = -Infinity;
+            let bestMove = null;
+            
+            for (let i = 0; i < 9; i++) {
+                if (grid[i] === null) {
+                    const testGrid = [...grid];
+                    testGrid[i] = 'O';
+                    const score = minimax(testGrid, 0, false, xEntanglementUsed, oEntanglementUsed);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = { type: 'place', cell: i };
+                    }
+                }
+            }
+            
+            return bestMove;
+        }
+        
+        function minimax(testGrid, depth, isMaximizing, testXUsed, testOUsed) {
+            const evaluation = evaluatePosition(testGrid);
+            if (evaluation !== null) return evaluation;
+            
+            if (testGrid.every(cell => cell !== null)) return 0;
+            if (depth > 8) return 0;
+            
+            if (isMaximizing) {
+                let maxEval = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (testGrid[i] === null) {
+                        testGrid[i] = 'O';
+                        const eval1 = minimax(testGrid, depth + 1, false, testXUsed, testOUsed);
+                        testGrid[i] = null;
+                        maxEval = Math.max(maxEval, eval1);
+                    }
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (testGrid[i] === null) {
+                        testGrid[i] = 'X';
+                        const eval1 = minimax(testGrid, depth + 1, true, testXUsed, testOUsed);
+                        testGrid[i] = null;
+                        minEval = Math.min(minEval, eval1);
+                    }
+                }
+                
+                if (!testXUsed) {
+                    for (let i = 0; i < 8; i++) {
+                        for (let j = i + 1; j < 9; j++) {
+                            if (testGrid[i] === null && testGrid[j] === null) {
+                                testGrid[i] = 'X*';
+                                testGrid[j] = 'X*';
+                                const eval2 = minimax(testGrid, depth + 1, true, true, testOUsed);
+                                testGrid[i] = null;
+                                testGrid[j] = null;
+                                minEval = Math.min(minEval, eval2);
+                            }
+                        }
+                    }
+                }
+                
+                return minEval;
+            }
+        }
+        
+        function evaluatePosition(testGrid) {
+            const winner = checkWinner(testGrid);
+            if (winner === 'O') return 10;
+            if (winner === 'X') return -10;
+            if (winner === 'tie') return 0;
+            return null;
+        }
+        
+        function checkWinner(board) {
+            const lines = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+            
+            let xHasLine = false;
+            let oHasLine = false;
+            
+            for (let line of lines) {
+                const [a, b, c] = line;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    if (board[a] === 'X') xHasLine = true;
+                    if (board[a] === 'O') oHasLine = true;
+                }
+            }
+            
+            if (xHasLine && oHasLine) return 'tie';
+            if (xHasLine) return 'X';
+            if (oHasLine) return 'O';
+            
+            if (board.every(cell => cell !== null)) {
+                return 'tie';
+            }
+            
+            return null;
+        }
+        
+        function isGameComplete() {
+            return grid.every(cell => cell !== null);
+        }
+        
+        function toggleMode() {
+            if (gameComplete || entangleFirst !== null || !canCurrentPlayerEntangle() || (gameMode === 'computer' && currentPlayer === 'O')) {
+                return;
+            }
+            mode = mode === 'place' ? 'entangle' : 'place';
+            updateDisplay();
+        }
+        
+        function canCurrentPlayerEntangle() {
+            if (gameMode === 'computer' && currentPlayer === 'O') return false;
+            return (currentPlayer === 'X' && !xEntanglementUsed) || 
+                   (currentPlayer === 'O' && !oEntanglementUsed);
+        }
+        
+        function measureQuantumState() {
+            const newGrid = [...grid];
+            
+            const xStarCells = [];
+            for (let i = 0; i < 9; i++) {
+                if (grid[i] === 'X*') xStarCells.push(i);
+            }
+            if (xStarCells.length === 2) {
+                const chosenCell = Math.random() < 0.5 ? xStarCells[0] : xStarCells[1];
+                newGrid[chosenCell] = 'X';
+                newGrid[xStarCells[0] === chosenCell ? xStarCells[1] : xStarCells[0]] = null;
+            }
+            
+            const oStarCells = [];
+            for (let i = 0; i < 9; i++) {
+                if (grid[i] === 'O*') oStarCells.push(i);
+            }
+            if (oStarCells.length === 2) {
+                const chosenCell = Math.random() < 0.5 ? oStarCells[0] : oStarCells[1];
+                newGrid[chosenCell] = 'O';
+                newGrid[oStarCells[0] === chosenCell ? oStarCells[1] : oStarCells[0]] = null;
+            }
+            
+            const winner = checkWinner(newGrid);
+            const result = {
+                grid: newGrid,
+                winner: winner,
+                shot: measurements.length + 1
+            };
+            
+            measurements.push(result);
+            measuredGrid = newGrid;
+            updateDisplay();
+        }
+        
+        function showOriginalBoard() {
+            measuredGrid = null;
+            updateDisplay();
+        }
+        
+        function getHilbertSpaceWavefunction() {
+            try {
+                const xEntangled = grid.filter(cell => cell === 'X*').length;
+                const oEntangled = grid.filter(cell => cell === 'O*').length;
+                
+                if (xEntangled === 0 && oEntangled === 0) {
+                    let matrixRows = [];
+                    for (let row = 0; row < 3; row++) {
+                        let rowStr = "";
+                        for (let col = 0; col < 3; col++) {
+                            const cell = grid[row * 3 + col];
+                            const displayCell = cell === null ? "." : (cell === 'X' ? '×' : cell === 'O' ? '○' : cell);
+                            rowStr += displayCell + " ";
+                        }
+                        matrixRows.push(rowStr.trim());
+                    }
+                    return `|${matrixRows.join(" ")}⟩`;
+                }
+                
+                let numOutcomes = 1;
+                if (xEntangled > 0) numOutcomes *= 2;
+                if (oEntangled > 0) numOutcomes *= 2;
+                
+                let terms = [];
+                
+                for (let outcome = 0; outcome < numOutcomes; outcome++) {
+                    let tempGrid = Array(9).fill(null);
+                    
+                    for (let i = 0; i < 9; i++) {
+                        const cell = grid[i];
+                        if (cell === 'X' || cell === 'O') {
+                            tempGrid[i] = cell;
+                        }
+                    }
+                    
+                    let outcomeIndex = 0;
+                    
+                    if (xEntangled > 0) {
+                        const xStarCells = [];
+                        for (let i = 0; i < 9; i++) {
+                            if (grid[i] === 'X*') xStarCells.push(i);
+                        }
+                        const xBit = (outcome >> outcomeIndex) & 1;
+                        tempGrid[xStarCells[xBit]] = 'X';
+                        outcomeIndex++;
+                    }
+                    
+                    if (oEntangled > 0) {
+                        const oStarCells = [];
+                        for (let i = 0; i < 9; i++) {
+                            if (grid[i] === 'O*') oStarCells.push(i);
+                        }
+                        const oBit = (outcome >> outcomeIndex) & 1;
+                        tempGrid[oStarCells[oBit]] = 'O';
+                        outcomeIndex++;
+                    }
+                    
+                    let matrixRows = [];
+                    for (let row = 0; row < 3; row++) {
+                        let rowStr = "";
+                        for (let col = 0; col < 3; col++) {
+                            const cell = tempGrid[row * 3 + col];
+                            const displayCell = cell === null ? "." : (cell === 'X' ? '×' : cell === 'O' ? '○' : cell);
+                            rowStr += displayCell + " ";
+                        }
+                        matrixRows.push(rowStr.trim());
+                    }
+                    terms.push(`|${matrixRows.join(" ")}⟩`);
+                }
+                
+                return terms.join(" + ");
+                
+            } catch (error) {
+                return "|Error in wavefunction⟩";
+            }
+        }
+        
+        function updateDisplay() {
+            updateGrid();
+            updateStatus();
+            updateWavefunction();
+            updateControls();
+            updateMeasurementResults();
+        }
+        
+        function updateGrid() {
+            const displayGrid = measuredGrid || grid;
+            
+            for (let i = 0; i < 9; i++) {
+                const cellElement = document.querySelector(`[data-index="${i}"]`);
+                const cellContent = document.getElementById(`cell-${i}`);
+                const cell = displayGrid[i];
+                
+                // Reset classes
+                cellElement.className = 'cell';
+                
+                // Set background color based on original grid
+                const originalCell = grid[i];
+                if (originalCell === 'X*') {
+                    cellElement.classList.add('x-entangled');
+                } else if (originalCell === 'O*') {
+                    cellElement.classList.add('o-entangled');
+                } else if (measuredGrid && measuredGrid[i] === null && originalCell === null) {
+                    cellElement.classList.add('empty-measured');
+                } else if (entangleFirst === i && !measuredGrid) {
+                    cellElement.classList.add('selected');
+                }
+                
+                // Set cursor
+                if (grid[i] === null && !gameComplete && !measuredGrid) {
+                    cellElement.style.cursor = 'pointer';
+                } else {
+                    cellElement.style.cursor = 'default';
+                }
+                
+                // Set content
+                if (cell === null) {
+                    cellContent.innerHTML = '';
+                } else if (cell === 'X*') {
+                    cellContent.innerHTML = '×<sup style="font-size: 16px;">*</sup>';
+                } else if (cell === 'O*') {
+                    cellContent.innerHTML = '○<sup style="font-size: 16px;">*</sup>';
+                } else if (cell === 'X') {
+                    cellContent.innerHTML = '×';
+                } else if (cell === 'O') {
+                    cellContent.innerHTML = '○';
+                } else {
+                    cellContent.innerHTML = cell;
+                }
+            }
+        }
+        
+        function updateStatus() {
+            const currentSymbol = currentPlayer === 'X' ? '×' : currentPlayer === 'O' ? '○' : currentPlayer;
+            const computerText = (gameMode === 'computer' && currentPlayer === 'O') ? ' (Computer)' : '';
+            document.getElementById('currentPlayerStatus').innerHTML = 
+                `Current Player: <span class="large-symbol">${currentSymbol}</span>${computerText}`;
+            
+            let modeText;
+            if (mode === 'place') {
+                modeText = 'Place definite state ';
+            } else {
+                const modeSymbol = currentPlayer === 'X' ? '×' : currentPlayer === 'O' ? '○' : currentPlayer;
+                modeText = `Create <span class="large-symbol">${modeSymbol}</span><sup>*</sup> entanglement`;
+            }
+            
+            if (entangleFirst !== null) {
+                modeText += ` (First cell: ${entangleFirst + 1})`;
+            }
+            
+            document.getElementById('modeStatus').innerHTML = `Mode: ${modeText}`;
+            document.getElementById('entanglementStatus').innerHTML = 
+                `Entanglements used: <span class="large-symbol">×</span> = ${xEntanglementUsed ? 'Yes' : 'No'}, <span class="large-symbol">○</span> = ${oEntanglementUsed ? 'Yes' : 'No'}`;
+        }
+        
+        function updateWavefunction() {
+            const wavefunction = getHilbertSpaceWavefunction();
+            const displayWavefunction = wavefunction
+                .replace(/×/g, '<span style="font-size: 18px;">×</span>')
+                .replace(/○/g, '<span style="font-size: 18px;">○</span>');
+            document.getElementById('wavefunctionDisplay').innerHTML = `|ψ⟩ = ${displayWavefunction}`;
+        }
+        
+        function updateControls() {
+            const modeToggleBtn = document.getElementById('modeToggleBtn');
+            const canToggle = !gameComplete && entangleFirst === null && canCurrentPlayerEntangle() && !(gameMode === 'computer' && currentPlayer === 'O');
+            
+            modeToggleBtn.disabled = !canToggle;
+            modeToggleBtn.innerHTML = `Switch to ${mode === 'place' ? 'Entangle' : 'Place'} mode`;
+            
+            if (mode === 'place' && !canCurrentPlayerEntangle()) {
+                modeToggleBtn.innerHTML += ' (Already used)';
+            }
+            if (gameMode === 'computer' && currentPlayer === 'O') {
+                modeToggleBtn.innerHTML += ' (Computer turn)';
+            }
+            
+            const measurementControls = document.getElementById('measurementControls');
+            if (isGameComplete()) {
+                measurementControls.style.display = 'block';
+                document.getElementById('showOriginalBtn').style.display = measuredGrid ? 'inline-block' : 'none';
+            } else {
+                measurementControls.style.display = 'none';
+            }
+        }
+        
+        function updateMeasurementResults() {
+            const resultsContainer = document.getElementById('measurementResults');
+            
+            if (measurements.length === 0) {
+                resultsContainer.innerHTML = '';
+                return;
+            }
+            
+            let html = '<h3>Measurement Results:</h3>';
+            
+            for (let idx = 0; idx < measurements.length; idx++) {
+                const result = measurements[idx];
+                const winnerText = result.winner === 'tie' ? 'Tie' : 
+                                 result.winner ? `${result.winner === 'X' ? '×' : result.winner === 'O' ? '○' : result.winner} Wins` : 
+                                 'No Winner';
+                
+                html += `<div class="measurement-results">
+                    <strong>Shot ${result.shot}: ${winnerText}</strong>
+                    <div class="measurement-grid">`;
+                
+                for (let cellIdx = 0; cellIdx < 9; cellIdx++) {
+                    const cell = result.grid[cellIdx];
+                    const cellClass = cell === null ? 'measurement-cell empty' : 'measurement-cell';
+                    const cellContent = cell === 'X' ? '×' : cell === 'O' ? '○' : cell || '·';
+                    html += `<div class="${cellClass}">${cellContent}</div>`;
+                }
+                
+                html += '</div></div>';
+            }
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        // Initialize the game when the page loads
+        window.addEventListener('DOMContentLoaded', initializeGame);
+    </script>
+</body>
+</html>
